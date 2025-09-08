@@ -1,230 +1,175 @@
-import { BarChart3, Calendar, MessageSquare, TrendingUp, Users, Clock } from "lucide-react";
+import { useState } from "react";
+import { Calendar, Users, BarChart3, TrendingUp, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-
-// Mock data for dashboard
-const stats = [
-  {
-    title: "Posts This Month",
-    value: "127",
-    change: "+12%",
-    icon: BarChart3,
-    color: "text-primary"
-  },
-  {
-    title: "Scheduled Posts",
-    value: "23",
-    change: "+5",
-    icon: Calendar,
-    color: "text-warning"
-  },
-  {
-    title: "Auto Replies",
-    value: "89",
-    change: "+18%",
-    icon: MessageSquare,
-    color: "text-success"
-  },
-  {
-    title: "Engagement Rate",
-    value: "94.2%",
-    change: "+3.1%",
-    icon: TrendingUp,
-    color: "text-accent"
-  }
-];
-
-const recentPosts = [
-  {
-    id: 1,
-    platform: "LinkedIn",
-    content: "Excited to share our latest product update! 🚀",
-    status: "posted",
-    scheduledFor: "2024-01-15 14:30",
-    engagement: "24 likes, 5 comments"
-  },
-  {
-    id: 2,
-    platform: "Threads",
-    content: "Behind the scenes of our development process...",
-    status: "queued",
-    scheduledFor: "2024-01-16 09:00",
-    engagement: "Pending"
-  },
-  {
-    id: 3,
-    platform: "LinkedIn", 
-    content: "Celebrating our team's achievements this quarter! 🎉",
-    status: "failed",
-    scheduledFor: "2024-01-15 16:00",
-    engagement: "Error: API limit"
-  }
-];
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'posted':
-      return 'bg-success/10 text-success border-success/20';
-    case 'queued':
-      return 'bg-warning/10 text-warning border-warning/20';
-    case 'failed':
-      return 'bg-destructive/10 text-destructive border-destructive/20';
-    default:
-      return 'bg-muted text-muted-foreground';
-  }
-};
-
-const getPlatformColor = (platform: string) => {
-  switch (platform) {
-    case 'LinkedIn':
-      return 'bg-blue-500/10 text-blue-600 border-blue-200';
-    case 'Threads':
-      return 'bg-purple-500/10 text-purple-600 border-purple-200';
-    default:
-      return 'bg-muted text-muted-foreground';
-  }
-};
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useNavigate } from "react-router-dom";
+import { usePosts } from "@/hooks/usePosts";
+import { useProfile } from "@/hooks/useProfile";
+import { formatDistanceToNow } from "date-fns";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const { posts, isLoading } = usePosts();
+  const { profile } = useProfile();
+
+  // Calculate stats from real data
+  const stats = {
+    totalPosts: posts.length,
+    scheduledPosts: posts.filter(p => p.status === 'queued').length,
+    publishedPosts: posts.filter(p => p.status === 'posted').length,
+    failedPosts: posts.filter(p => p.status === 'failed').length,
+  };
+
+  const recentPosts = posts.slice(0, 5);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'posted': return 'bg-success/10 text-success border-success/20';
+      case 'queued': return 'bg-warning/10 text-warning border-warning/20';
+      case 'failed': return 'bg-destructive/10 text-destructive border-destructive/20';
+      case 'draft': return 'bg-muted/10 text-muted-foreground border-muted/20';
+      default: return 'bg-muted/10 text-muted-foreground border-muted/20';
+    }
+  };
+
+  const getPlatformColor = (platform: string) => {
+    switch (platform) {
+      case 'linkedin': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'threads': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
-      {/* Header */}
+    <div className="flex-1 space-y-6 p-6">
+      {/* Welcome Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Welcome back, {profile?.display_name || 'User'}! 👋
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Monitor your social media performance and upcoming posts
+            Here's what's happening with your social media posts
           </p>
         </div>
-        <Button variant="gradient" size="lg" className="animate-pulse-glow">
-          <Calendar className="w-4 h-4 mr-2" />
-          Schedule New Post
+        <Button onClick={() => navigate('/composer')} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Create Post
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <Card key={stat.title} className="bg-gradient-card border-border/50 hover:shadow-md transition-all duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-              <p className="text-xs text-success flex items-center mt-1">
-                <TrendingUp className="w-3 h-3 mr-1" />
-                {stat.change} from last month
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Posts */}
-        <Card className="lg:col-span-2 bg-gradient-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              Recent Posts
-            </CardTitle>
-            <CardDescription>
-              Your latest scheduled and posted content
-            </CardDescription>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Posts</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentPosts.map((post) => (
-                <div key={post.id} className="flex items-start space-x-3 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge className={getPlatformColor(post.platform)}>
-                        {post.platform}
-                      </Badge>
-                      <Badge variant="outline" className={getStatusColor(post.status)}>
-                        {post.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-foreground line-clamp-2">
-                      {post.content}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Scheduled: {post.scheduledFor}</span>
-                      <span>{post.engagement}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <div className="text-2xl font-bold">{stats.totalPosts}</div>
+            <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
         </Card>
 
-        {/* Quick Actions & Performance */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <Card className="bg-gradient-card">
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>
-                Common tasks and shortcuts
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button className="w-full justify-start" variant="outline">
-                <Calendar className="w-4 h-4 mr-2" />
-                Schedule LinkedIn Post
-              </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Create Auto-Reply Rule
-              </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <Users className="w-4 h-4 mr-2" />
-                View Analytics
-              </Button>
-            </CardContent>
-          </Card>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Scheduled</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-warning">{stats.scheduledPosts}</div>
+            <p className="text-xs text-muted-foreground">Ready to publish</p>
+          </CardContent>
+        </Card>
 
-          {/* Performance Summary */}
-          <Card className="bg-gradient-card">
-            <CardHeader>
-              <CardTitle>This Week</CardTitle>
-              <CardDescription>
-                Performance overview
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Posts Scheduled</span>
-                  <span className="font-medium">8/10</span>
-                </div>
-                <Progress value={80} className="h-2" />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Engagement Rate</span>
-                  <span className="font-medium">94.2%</span>
-                </div>
-                <Progress value={94} className="h-2" />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Auto-Reply Success</span>
-                  <span className="font-medium">67/70</span>
-                </div>
-                <Progress value={96} className="h-2" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Published</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-success">{stats.publishedPosts}</div>
+            <p className="text-xs text-muted-foreground">Successfully posted</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Failed</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">{stats.failedPosts}</div>
+            <p className="text-xs text-muted-foreground">Need attention</p>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Recent Posts Table */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Recent Posts</CardTitle>
+            <CardDescription>Your latest scheduled and published posts</CardDescription>
+          </div>
+          <Button variant="outline" onClick={() => navigate('/queue')}>
+            View All
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {recentPosts.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No posts yet. Start by creating your first post!</p>
+              <Button className="mt-4" onClick={() => navigate('/composer')}>
+                Create Your First Post
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Content</TableHead>
+                  <TableHead>Platform</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Scheduled</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentPosts.map((post) => (
+                  <TableRow key={post.id}>
+                    <TableCell className="max-w-md">
+                      <p className="truncate">{post.content_text}</p>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className={getPlatformColor(post.platform)}>
+                        {post.platform}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className={getStatusColor(post.status)}>
+                        {post.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDistanceToNow(new Date(post.scheduled_at), { addSuffix: true })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
